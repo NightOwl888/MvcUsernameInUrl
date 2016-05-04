@@ -7,31 +7,24 @@ namespace MvcUsernameInUrl
     {
         public void OnActionExecuting(ActionExecutingContext filterContext)
         {
-            var path = filterContext.HttpContext.Request.Path;
-
-            if (!string.IsNullOrEmpty(path))
-            {
-                // remove the leading slash
-                path = path.Substring(1);
-            }
-
+            var routeValues = filterContext.RequestContext.RouteData.Values;
             bool isLoggedIn = filterContext.HttpContext.User.Identity.IsAuthenticated;
-            bool requestHasUserName = filterContext.RequestContext.RouteData.Values.ContainsKey("username");
+            bool requestHasUserName = routeValues.ContainsKey("username");
 
             if (isLoggedIn && !requestHasUserName)
             {
                 var userName = filterContext.HttpContext.User.Identity.Name;
-                filterContext.Result = new RedirectResult("/" + HttpUtility.UrlEncode(userName) + "/" + path);
+                // Add the user name as a route value
+                routeValues.Add("username", userName);
+
+                filterContext.Result = new RedirectToRouteResult(routeValues);
             }
             else if (!isLoggedIn && requestHasUserName)
             {
-                string newPath = "/";
-                int firstSlashIndex = path.IndexOf("/");
-                if (firstSlashIndex > 0)
-                {
-                    newPath = path.Substring(firstSlashIndex);
-                }
-                filterContext.Result = new RedirectResult(newPath);
+                // Remove the user name as a route value
+                routeValues.Remove("username");
+
+                filterContext.Result = new RedirectToRouteResult(routeValues);
             }
         }
 
